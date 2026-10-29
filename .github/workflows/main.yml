@@ -14,6 +14,11 @@ jobs:
           repository: TGX-Android/Telegram-X
           ref: ${{ inputs.ref }}
           submodules: recursive
+      - name: Pull Git LFS files in submodules
+        run: |
+          git lfs install --skip-repo
+          git lfs pull
+          git submodule foreach --recursive 'git lfs pull'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
