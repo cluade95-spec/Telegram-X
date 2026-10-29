@@ -13,6 +13,10 @@ on:
         description: "Gradle arguments"
         required: false
         default: "assembleUniversalDebug"
+      sign_release:
+        description: "Generate a signing keystore (needed for release builds)"
+        required: false
+        default: "false"
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -36,6 +40,22 @@ jobs:
           echo "sdk.dir=$ANDROID_HOME" >> local.properties
           echo "telegram.api_id=${{ secrets.TG_API_ID }}" >> local.properties
           echo "telegram.api_hash=${{ secrets.TG_API_HASH }}" >> local.properties
+      - name: Create signing keystore
+        if: ${{ inputs.sign_release == 'true' }}
+        run: |
+          KS_PASS="$(openssl rand -hex 16)"
+          echo "::add-mask::$KS_PASS"
+          keytool -genkeypair -keystore "$RUNNER_TEMP/release.jks" -alias tgx \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -storepass "$KS_PASS" -keypass "$KS_PASS" \
+            -dname "CN=TGX, O=TGX, C=US"
+          {
+            echo "keystore.file=$RUNNER_TEMP/release.jks"
+            echo "keystore.password=$KS_PASS"
+            echo "key.alias=tgx"
+            echo "key.password=$KS_PASS"
+          } > "$RUNNER_TEMP/keystore.properties"
+          echo "keystore.file=$RUNNER_TEMP/keystore.properties" >> local.properties
       - run: scripts/setup.sh
         env:
           TERM: xterm
